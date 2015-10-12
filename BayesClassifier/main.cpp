@@ -204,6 +204,9 @@ void findAllClicked()
 ///////////////////////////////////////////////////////////////////////////
 void stat_handle()
 {
+#if defined __GNUC__ || defined __APPLE__
+    using namespace __gnu_cxx;
+#endif
     hash_map<HASH_VALUE, HASH_VALUE, Hash_16bits<HASH_VALUE> > OBJHASH;
     for (int i=0; i<scale; i++)
     {
@@ -237,6 +240,9 @@ void stat_handle()
 
 void clicked_handle()
 {
+#if defined __GNUC__ || defined __APPLE__
+    using namespace __gnu_cxx;
+#endif
     hash_map<HASH_VALUE, HASH_VALUE, Hash_16bits<HASH_VALUE> > OBJHASH;
     for (int i=0; i<clicked_number; i++)
     {
@@ -276,7 +282,9 @@ void clicked_string_handle()
     //检查存在性
     //在hash表里面注册
     //在barrel里面注册
-    
+#if defined __GNUC__ || defined __APPLE__
+    using namespace __gnu_cxx;
+#endif
     
     //hash表
     hash_map<string, string, Hash_string> hashMap;
@@ -313,7 +321,9 @@ void stat_string_handle()
     //在hash表里面注册
     //在barrel里面注册
     
-    
+#if defined __GNUC__ || defined __APPLE__
+    using namespace __gnu_cxx;
+#endif
     //hash表
     hash_map<string, string, Hash_string> hashMap;
     //所有

@@ -7,9 +7,11 @@
 //
 // push!
 #define _SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS
-
-
+#if defined __GNUC__ || defined __APPLE__
+#include <ext/hash_map>
+#else
 #include <hash_map>
+#endif
 #include <unordered_map>
 #include <iostream>
 #include <cstdio>
