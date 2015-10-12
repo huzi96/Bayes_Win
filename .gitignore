@@ -194,3 +194,12 @@ FakesAssemblies/
 
 # Visual Studio 6 workspace options file
 *.opt
+
+#Xcode directory
+Build/
+BayesAdapt/
+DerivedData/
+.DS_Store
+BayesClassifier/.DS_Store
+#Xcode project
+BayesAdapt.xcodeproj
