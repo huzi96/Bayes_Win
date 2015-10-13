@@ -70,15 +70,16 @@ static string directory = "C:\\Data\\d";
 struct Selector
 {
 private:
-	ifstream file;
+	fstream file;
 	//选择第i条记录
+public:
 	Info operator[](long i)
 	{
 		//认识到应该选择哪个文件
 		unsigned file_code = i / 9999999 + 1;
 		stringstream ss;
 		ss << file_code;
-		file.open(directory +  ss.str());
+		file.open(directory +  ss.str(),ios::in | ios::binary);
 		cout << "Reading File " << directory + ss.str() <<endl;
 		
 		//计算出偏移地址
@@ -86,6 +87,9 @@ private:
 		bias = i % 9999999;
 
 		file.seekg(bias * 104, file.beg);
+		Info gotItem;
+		file.read((char *)&gotItem, 104);
+		return gotItem;
 	}
 
 };

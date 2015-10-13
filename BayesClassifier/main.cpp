@@ -162,21 +162,8 @@ void predict(HASH_VALUE request_id, HASH_VALUE request_pos)
 
 int main()
 {
-
-	cout << "Running Test" << endl;
-//    readAllData();
-//#ifdef STAT
-//    stat_handle();
-//#else
-//    findAllClicked();
-//    stat_string_handle();
-//#endif
-//    predict(HASH_VALUE("ZjkxMzg5OGYwNjQz"), HASH_VALUE("MzExZjI3YjY3Njdh"));
-//    for (int i=0; i<100; i++)
-//    {
-//        predict(table[i].id, table[i].pos_id);
-//    }
-//    delete []table;
+	Selector selector;
+	Info testGet = selector[10000000];
     return 0;
 }
 
