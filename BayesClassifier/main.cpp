@@ -163,7 +163,9 @@ void predict(HASH_VALUE request_id, HASH_VALUE request_pos)
 int main()
 {
 	Selector selector;
-	Info testGet = selector[10000000];
+
+
+
     return 0;
 }
 

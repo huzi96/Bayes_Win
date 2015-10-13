@@ -76,7 +76,7 @@ public:
 	Info operator[](long i)
 	{
 		//认识到应该选择哪个文件
-		unsigned file_code = i / 9999999 + 1;
+		unsigned file_code = i / 10000000 + 1;
 		stringstream ss;
 		ss << file_code;
 		file.open(directory +  ss.str(),ios::in | ios::binary);
@@ -84,7 +84,7 @@ public:
 		
 		//计算出偏移地址
 		unsigned bias = 0;
-		bias = i % 9999999;
+		bias = i % 10000000;
 
 		file.seekg(bias * 104, file.beg);
 		Info gotItem;
