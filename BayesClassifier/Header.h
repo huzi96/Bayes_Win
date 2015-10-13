@@ -5,7 +5,7 @@
 //  Created by Michael on 15/10/4.
 //  Copyright © 2015年 Michael. All rights reserved.
 //
-// push!
+#pragma pack(8)
 #define _SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS
 #if defined __GNUC__ || defined __APPLE__
 #include <ext/hash_map>
@@ -24,6 +24,7 @@
 #include <cstring>
 #include <exception>
 #include <string>
+#include <sstream>
 #define HASHLEN 17
 using namespace std;
 const int line = 120;
@@ -63,6 +64,31 @@ struct Info
     int stable, click;//is stable / is clicked
 };
 
+
+static string directory = "C:\\Data\\d";
+//大型文件选择器
+struct Selector
+{
+private:
+	ifstream file;
+	//选择第i条记录
+	Info operator[](long i)
+	{
+		//认识到应该选择哪个文件
+		unsigned file_code = i / 9999999 + 1;
+		stringstream ss;
+		ss << file_code;
+		file.open(directory +  ss.str());
+		cout << "Reading File " << directory + ss.str() <<endl;
+		
+		//计算出偏移地址
+		unsigned bias = 0;
+		bias = i % 9999999;
+
+		file.seekg(bias * 104, file.beg);
+	}
+
+};
 
 bool operator == (const Info & op1, const Info & op2);
 void searchForFirstUser();
