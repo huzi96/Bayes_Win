@@ -164,12 +164,13 @@ public:
 	unsigned int verifyCode; //验证码,用于验证字符串身份
 	int cnt; //出现次数
 	int next;
-
+	unsigned int pairCode;
 	Node() 
 	{
 		cnt = 0;
 		next = 0;
 		verifyCode = 0;
+		pairCode = 0;
 	}
 };
 
@@ -196,7 +197,7 @@ public:
 		memset(head, 0, sizeof(head));
 	}
 
-private:
+//private:
 	unsigned int getHashVal(const char * str);
 	unsigned int getVerifyCode(const char * str);
 };

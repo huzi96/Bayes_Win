@@ -109,15 +109,12 @@ void predict(HASH_VALUE request_id, HASH_VALUE request_pos)
 Selector selector;
 
 void handle_stat();
-
-
-class xdnotask : public HashTable
-{
-
-};
+void ques1();
 
 int main()
 {
+	//handle_stat();
+	ques1();
 	system("pause");
     return 0;
 }
@@ -139,6 +136,41 @@ void handle_stat()
 	Info tmp = selector.sequence_read(0);
 	memcpy(seq, &tmp.id, 16);
 	cout << hashtable[hashtable.find(seq)].cnt << endl;
+	delete &hashtable;
+}
+
+void ques1()
+{
+	HashTable &hashtable = *new HashTable;
+	fstream logf("log.txt",ios::out);
+	long test_scale = 100000000;
+	for (long i = 0; i < test_scale; i++)
+	{
+		char seq[20] = { 0 };
+		Info tmp = selector.sequence_read(i);
+		memcpy(seq, &tmp.pos_id, 16);
+		hashtable.insert(seq);
+		unsigned int pos = hashtable.find(seq);
+		logf << i << ' '<< pos << endl;
+		if (hashtable[pos].cnt==0)
+		{
+			memset(seq, 0, 20);
+			memcpy(seq, &tmp.ads_id, 16);
+			hashtable[pos].pairCode = hashtable.getHashVal(seq);
+		}
+		else
+		{
+			memset(seq, 0, 20);
+			memcpy(seq, &tmp.ads_id, 16);
+			unsigned current = hashtable.getHashVal(seq);
+			if (hashtable[pos].pairCode != current)
+			{
+				cout << "Mismatch!! AT "<< i <<endl;
+				break;
+			}
+		}
+	}
+	logf.close();
 	delete &hashtable;
 }
 
