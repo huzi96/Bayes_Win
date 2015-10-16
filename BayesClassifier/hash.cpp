@@ -1,41 +1,5 @@
 #include "Header.h"
 
-
-class Node
-{
-	friend class HashTable;
-private:
-	unsigned int verifyCode; //验证码,用于验证字符串身份
-	int cnt; //出现次数
-	int next;
-
-	Node() {} //防止生成
-};
-
-
-class HashTable
-{
-public:
-	static const int N = 165749;
-	
-	int head[N] = {0}; //大小为N
-	
-	Node hashTable[5 * N]; //所有节点都存下来，可能一条链有多个节点
-	int nodeCnt = 1;
-
-
-	bool insert(const char * s);
-	int find(const char * s);
-
-	Node & operator[] (const int num);
-
-private:
-	unsigned int getHashVal(const char * str);
-	unsigned int getVerifyCode(const char * str);
-};
-
-
-
 bool HashTable::insert(const char * s)
 {
 	unsigned int key = getHashVal(s) % N;

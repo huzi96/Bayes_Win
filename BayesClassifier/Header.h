@@ -7,11 +7,7 @@
 //
 #pragma pack(8)
 #define _SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS
-#if defined __GNUC__ || defined __APPLE__
-#include <ext/hash_map>
-#else
-#include <hash_map>
-#endif
+#define FileScale 10000000
 #include <unordered_map>
 #include <iostream>
 #include <cstdio>
@@ -51,6 +47,11 @@ struct HASH_VALUE
             dist[i] = str[i];
         }
     }
+	char * c_str()//奇怪的写法
+	{
+		char * p = (char *)this;
+		return p;
+	}
 };
 bool operator == (const HASH_VALUE &op1, const HASH_VALUE &op2);
 ostream &operator << (ostream &out, const HASH_VALUE &op);
@@ -71,27 +72,133 @@ struct Selector
 {
 private:
 	fstream file;
+	int openedFileCode;
+	char *cache;
 	//选择第i条记录
 public:
-	Info operator[](long i)
+	Selector():cache(NULL),openedFileCode(0)
 	{
-		//认识到应该选择哪个文件
-		unsigned file_code = i / 10000000 + 1;
-		stringstream ss;
-		ss << file_code;
-		file.open(directory +  ss.str(),ios::in | ios::binary);
-		cout << "Reading File " << directory + ss.str() <<endl;
-		
-		//计算出偏移地址
-		unsigned bias = 0;
-		bias = i % 10000000;
+		cache = new char[FileScale * 104 + 1000];
+	}
+	//Info operator[](long i)
+	//{
+	//	//认识到应该选择哪个文件
+	//	unsigned file_code = i / 10000000 + 1;
+	//	if (fileCode == 0)
+	//	{
+	//		stringstream ss;
+	//		ss << file_code;
+	//		file.open(directory + ss.str(), ios::in | ios::binary);
+	//		fileCode = file_code;
+	//	}
+	//	else if (fileCode == file_code)
+	//	{
+	//		;
+	//	}
+	//	else
+	//	{
+	//		file.close();
+	//		stringstream ss;
+	//		ss << file_code;
+	//		file.open(directory + ss.str(), ios::in | ios::binary);
+	//		fileCode = file_code;
+	//		cout << "Switching to file " << file_code << endl;
+	//	}
+	//	//cout << "Reading File " << directory + ss.str() <<endl;
+	//	
+	//	//计算出偏移地址
+	//	unsigned bias = 0;
+	//	bias = i % 10000000;
+	//	file.seekg(bias * 104, file.beg);
+	//	Info gotItem;
+	//	file.read((char *)&gotItem, 104);
+	//	return gotItem;
+	//}
 
-		file.seekg(bias * 104, file.beg);
-		Info gotItem;
-		file.read((char *)&gotItem, 104);
-		return gotItem;
+	//为顺序访问优化的选择器
+	Info sequence_read(int i)
+	{
+		//计算应该选用哪个文件
+		unsigned file_code = i / FileScale + 1;
+		if (openedFileCode == file_code)
+		{
+			//已经打开了正确地文件并且读取到了缓冲区
+			//计算在缓冲区中的地址
+			unsigned bias = i % FileScale;
+			return *(Info *)(cache + 104 * bias);
+		}	
+		else if (openedFileCode == 0)
+		{
+			openedFileCode = file_code;
+			stringstream ss;
+			ss << file_code;
+			file.open(directory + ss.str(), ios::in | ios::binary);
+		}
+		else
+		{
+			file.close();
+			openedFileCode = file_code;
+			stringstream ss;
+			ss << file_code;
+			file.open(directory + ss.str(), ios::in | ios::binary);
+		}
+		file.read(cache, 104 * FileScale);
+		unsigned bias = i % FileScale;
+		return *(Info *)(cache + 104 * bias);
 	}
 
+	~Selector()
+	{
+		if (openedFileCode!=0)
+		{
+			file.close();
+		}
+		delete []cache;
+	}
+};
+
+class Node
+{
+	friend class HashTable;
+public:
+	unsigned int verifyCode; //验证码,用于验证字符串身份
+	int cnt; //出现次数
+	int next;
+
+	Node() 
+	{
+		cnt = 0;
+		next = 0;
+		verifyCode = 0;
+	}
+};
+
+
+class HashTable
+{
+public:
+	static const int N = 165749;
+
+	int head[N]; //大小为N
+
+	Node hashTable[5 * N]; //所有节点都存下来，可能一条链有多个节点
+	int nodeCnt = 1;
+
+
+	bool insert(const char * s);
+	int find(const char * s);
+
+	Node & operator[] (const int num);
+
+	HashTable()
+	{
+		memset(hashTable, 0, sizeof(hashTable));
+		memset(head, 0, sizeof(head));
+	}
+
+private:
+	unsigned int getHashVal(const char * str);
+	unsigned int getVerifyCode(const char * str);
 };
 
 bool operator == (const Info & op1, const Info & op2);
