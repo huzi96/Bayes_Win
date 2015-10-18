@@ -111,13 +111,9 @@ Selector selector;
 void handle_stat();
 
 
-class xdnotask : public HashTable
-{
-
-};
-
 int main()
 {
+	Info tmp = selector.sequence_read(0);
 	system("pause");
     return 0;
 }

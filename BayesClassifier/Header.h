@@ -15,7 +15,6 @@
 #include <cstdlib>
 #include <vector>
 #include <fstream>
-#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -61,7 +60,7 @@ struct Info
     HASH_VALUE id, ads_id, pos_id, ip_id;//16bytes HASH value
     int lang;//en OR zh , 0->zh, 1->en
     char OS_info[HASHLEN];//whose length is unknown
-    long timeStamp;//Unix Time stamp
+    long long timeStamp;//Unix Time stamp
     int stable, click;//is stable / is clicked
 };
 
@@ -73,47 +72,17 @@ struct Selector
 private:
 	fstream file;
 	int openedFileCode;
+	int whichHalf;
 	char *cache;
 	//选择第i条记录
 public:
-	Selector():cache(NULL),openedFileCode(0)
+	Selector() :cache(NULL), openedFileCode(0)
 	{
-		cache = new char[FileScale * 104 + 1000];
+		whichHalf = -1;
+		cout << "Requesting for cache" << endl;
+		cache = new char[FileScale * 104 / 2 + 1000];
+		cout << "Succeed" << endl;
 	}
-	//Info operator[](long i)
-	//{
-	//	//认识到应该选择哪个文件
-	//	unsigned file_code = i / 10000000 + 1;
-	//	if (fileCode == 0)
-	//	{
-	//		stringstream ss;
-	//		ss << file_code;
-	//		file.open(directory + ss.str(), ios::in | ios::binary);
-	//		fileCode = file_code;
-	//	}
-	//	else if (fileCode == file_code)
-	//	{
-	//		;
-	//	}
-	//	else
-	//	{
-	//		file.close();
-	//		stringstream ss;
-	//		ss << file_code;
-	//		file.open(directory + ss.str(), ios::in | ios::binary);
-	//		fileCode = file_code;
-	//		cout << "Switching to file " << file_code << endl;
-	//	}
-	//	//cout << "Reading File " << directory + ss.str() <<endl;
-	//	
-	//	//计算出偏移地址
-	//	unsigned bias = 0;
-	//	bias = i % 10000000;
-	//	file.seekg(bias * 104, file.beg);
-	//	Info gotItem;
-	//	file.read((char *)&gotItem, 104);
-	//	return gotItem;
-	//}
 
 	//为顺序访问优化的选择器
 	Info sequence_read(int i)
@@ -122,11 +91,38 @@ public:
 		unsigned file_code = i / FileScale + 1;
 		if (openedFileCode == file_code)
 		{
-			//已经打开了正确地文件并且读取到了缓冲区
+			//已经打开了正确地文件
 			//计算在缓冲区中的地址
 			unsigned bias = i % FileScale;
-			return *(Info *)(cache + 104 * bias);
-		}	
+			if (bias < 5000000)
+			{
+				if (whichHalf == 0)
+				{
+					return *(Info *)(cache + 104 * bias);
+				}
+				else
+				{
+					whichHalf = 0;
+					file.seekg(0, file.beg);
+					file.read(cache, 52 * FileScale);
+					return *(Info *)(cache + 104 * bias);
+				}
+			}
+			else
+			{
+				if (whichHalf == 1)
+				{
+					return *(Info *)(cache + 104 * (bias - 5000000));
+				}
+				else
+				{
+					whichHalf = 1;
+					file.seekg(104 * 5000000, file.beg);
+					file.read(cache, 52 * FileScale);
+					return *(Info *)(cache + 104 * (bias - 5000000));
+				}
+			}
+		}
 		else if (openedFileCode == 0)
 		{
 			openedFileCode = file_code;
@@ -142,18 +138,33 @@ public:
 			ss << file_code;
 			file.open(directory + ss.str(), ios::in | ios::binary);
 		}
-		file.read(cache, 104 * FileScale);
+
+
 		unsigned bias = i % FileScale;
-		return *(Info *)(cache + 104 * bias);
+
+		if (bias < 5000000)
+		{
+			whichHalf = 0;
+			file.seekg(0, file.beg);
+			file.read(cache, 52 * FileScale);
+			return *(Info *)(cache + 104 * bias);
+		}
+		else
+		{
+			whichHalf = 1;
+			file.seekg(104 * 5000000, file.beg);
+			file.read(cache, 52 * FileScale);
+			return *(Info *)(cache + 104 * (bias - 5000000));
+		}
 	}
 
 	~Selector()
 	{
-		if (openedFileCode!=0)
+		if (openedFileCode != 0)
 		{
 			file.close();
 		}
-		delete []cache;
+		delete[]cache;
 	}
 };
 
