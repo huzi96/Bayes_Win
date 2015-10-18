@@ -113,10 +113,21 @@ void handle_stat();
 
 int main()
 {
-	Info tmp = selector.sequence_read(0);
+	Info tmp;
+	int cnt = 0;
+	for (int i = 0; i <662928831; i++)
+	{
+		if (selector.sequence_read(i).click == 1)
+		{
+			cnt++;
+		}
+	}
+	cout << cnt << endl;
 	system("pause");
     return 0;
 }
+
+
 
 void handle_stat()
 {
