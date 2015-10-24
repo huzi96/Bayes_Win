@@ -2,70 +2,70 @@
 
 bool HashTable::insert(const char * s)
 {
-	unsigned int key = getHashVal(s) % N;
-	unsigned int verifyCode = getVerifyCode(s);
-
-	int i = head[key];
-	while (i && hashTable[i].verifyCode != verifyCode)
-		i = hashTable[i].next;
-
-	if (hashTable[i].verifyCode == verifyCode) //ÒÑÓĞÏàÍ¬´®
-	{
-		hashTable[i].cnt++;
-		return 0;
-	}
-	else //Î´³öÏÖ¹ı
-	{
-		hashTable[nodeCnt].cnt = 0;
-		hashTable[nodeCnt].verifyCode = verifyCode;
-		hashTable[nodeCnt].next = head[key];
-		head[key] = nodeCnt++;
-		return 1;
-	}
+    unsigned int key = getHashVal(s) % N;
+    unsigned int verifyCode = getVerifyCode(s);
+    
+    int i = head[key];
+    while (i && hashTable[i].verifyCode != verifyCode)
+        i = hashTable[i].next;
+    
+    if (hashTable[i].verifyCode == verifyCode) //å·²æœ‰ç›¸åŒä¸²
+    {
+        hashTable[i].cnt++;
+        return 0;
+    }
+    else //æœªå‡ºç°è¿‡
+    {
+        hashTable[nodeCnt].cnt = 0;
+        hashTable[nodeCnt].verifyCode = verifyCode;
+        hashTable[nodeCnt].next = head[key];
+        head[key] = nodeCnt++;
+        return 1;
+    }
 }
 
-int HashTable::find(const char * s) //²éÕÒ×Ö·û´®sËùÔÚ½Úµã±àºÅ,Èç¹ûÃ»ÓĞÔò·µ»Ø0
+int HashTable::find(const char * s) //æŸ¥æ‰¾å­—ç¬¦ä¸²sæ‰€åœ¨èŠ‚ç‚¹ç¼–å·,å¦‚æœæ²¡æœ‰åˆ™è¿”å›0
 {
-	unsigned int key = getHashVal(s) % N;
-	unsigned int verifyCode = getVerifyCode(s);
-
-	int i = head[key];
-	while (i && hashTable[i].verifyCode != verifyCode)
-		i = hashTable[i].next;
-
-	return i;
+    unsigned int key = getHashVal(s) % N;
+    unsigned int verifyCode = getVerifyCode(s);
+    
+    int i = head[key];
+    while (i && hashTable[i].verifyCode != verifyCode)
+        i = hashTable[i].next;
+    
+    return i;
 }
 
 Node & HashTable::operator[] (const int num)
 {
-	return hashTable[num];
+    return hashTable[num];
 }
 
 unsigned int HashTable::getHashVal(const char * str) //BKDRHash
 {
-	unsigned int seed = 1313131;
-	unsigned int hash = 0;
-
-	while (*str)
-	{
-		hash = hash * seed + (*str++);
-	}
-	return hash;
+    unsigned int seed = 1313131;
+    unsigned int hash = 0;
+    
+    while (*str)
+    {
+        hash = hash * seed + (*str++);
+    }
+    return hash;
 }
 
 unsigned int HashTable::getVerifyCode(const char * str) //EFLHash
 {
-	unsigned int h = 0;
-	unsigned int x = 0;
-
-	while (*str)
-	{
-		h = (h << 4) + (*str++);
-		if ((x = h & 0xf0000000L) != 0) //³¬³öÆß¸ö×Ö·û
-		{
-			h ^= (x >> 24); //½«¶àÓàÎ»ÓëÄ©ËÄÎ»Òì»ò
-			h &= ~x; //É¾³ı¶àÓàÎ»
-		}
-	}
-	return h;
+    unsigned int h = 0;
+    unsigned int x = 0;
+    
+    while (*str)
+    {
+        h = (h << 4) + (*str++);
+        if ((x = h & 0xf0000000L) != 0) //è¶…å‡ºä¸ƒä¸ªå­—ç¬¦
+        {
+            h ^= (x >> 24); //å°†å¤šä½™ä½ä¸æœ«å››ä½å¼‚æˆ–
+            h &= ~x; //åˆ é™¤å¤šä½™ä½
+        }
+    }
+    return h;
 }
