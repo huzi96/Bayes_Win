@@ -5,6 +5,7 @@
 //  Created by Michael on 15/10/4.
 //  Copyright © 2015年 Michael. All rights reserved.
 //
+//  Modify to test git
 #pragma pack(8)
 #define _SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS
 #define FileScale 10000000
