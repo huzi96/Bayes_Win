@@ -9,6 +9,7 @@
 #pragma pack(8)
 #define _SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS
 #define FileScale 10000000
+#define FULL_SCALE 662928831
 #include <unordered_map>
 #include <iostream>
 #include <cstdio>
@@ -66,7 +67,7 @@ struct Info
 };
 
 
-static string directory = "C:\\Data\\d";
+static string directory = "/Volumes/Hyakuya/orderedData/d";
 //大型文件选择器
 struct Selector
 {
@@ -176,7 +177,7 @@ public:
 	unsigned int verifyCode; //验证码,用于验证字符串身份
 	int cnt; //出现次数
 	int next;
-
+    char str[20];
 	Node() 
 	{
 		cnt = 0;

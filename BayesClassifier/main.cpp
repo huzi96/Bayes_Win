@@ -110,20 +110,11 @@ Selector selector;
 
 void handle_stat();
 
+HashTable hashtable;
 
 int main()
 {
-	Info tmp;
-	int cnt = 0;
-	for (int i = 0; i <662928831; i++)
-	{
-		if (selector.sequence_read(i).click == 1)
-		{
-			cnt++;
-		}
-	}
-	cout << cnt << endl;
-	system("pause");
+	
     return 0;
 }
 
@@ -148,6 +139,8 @@ void handle_stat()
 	cout << hashtable[hashtable.find(seq)].cnt << endl;
 	delete &hashtable;
 }
+
+
 
 //void readAllData()
 //{
