@@ -19,10 +19,15 @@
 #include <fstream>
 #include <cstdlib>
 #include <cstring>
+#include <map>
+#include <algorithm>
 #include <exception>
 #include <string>
 #include <sstream>
 #define HASHLEN 17
+//Attention
+//Hashtables have diffrent length
+//os 165749 id 1657493 ip 7657493
 using namespace std;
 const int line = 120;
 const long num = 10000;
@@ -186,11 +191,14 @@ public:
 	}
 };
 
+const int bigN = 5657493;
+const int smallN = 165749;
+
 
 class HashTable
 {
 public:
-	static const int N = 165749;
+	static const int N = bigN;
 
 	int head[N]; //大小为N
 

@@ -1,5 +1,6 @@
 #include "Header.h"
 
+extern int indicator;
 bool HashTable::insert(const char * s)
 {
     unsigned int key = getHashVal(s) % N;
