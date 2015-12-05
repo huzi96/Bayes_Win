@@ -182,8 +182,8 @@ public:
 	unsigned int verifyCode; //验证码,用于验证字符串身份
 	int cnt; //出现次数
 	int next;
-    char str[20];
-	Node() 
+//    char str[20];
+	Node()
 	{
 		cnt = 0;
 		next = 0;

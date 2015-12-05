@@ -139,13 +139,13 @@ int build_hash()
         char cache[20];
         memset(cache, 0, sizeof(cache));
         /* 下面这行是要修改的参数A */
-        memcpy(cache, tmp.ip_id.c_str(), 16);//拷贝字符串
+        memcpy(cache, tmp.OS_info, 17);//拷贝字符串
         hashtable.insert(cache);
-        int pos_in_hash = hashtable.find(cache);
-        memcpy(hashtable[pos_in_hash].str, cache, 20);//插入源字符串
+//        int pos_in_hash = hashtable.find(cache);
+//        memcpy(hashtable[pos_in_hash].str, cache, 20);//插入源字符串
     }
     //写入文件,要修改的参数B
-    fstream hf("ip_hash.bin",ios::out|ios::binary);
+    fstream hf("os_hash.bin",ios::out|ios::binary);
     hf.write((char *)&hashtable, sizeof(hashtable));
     hf.close();
     return 0;
@@ -201,10 +201,10 @@ void register_all_clicked()
             cnt_stable++;
         }
     }
-//    fid.write((char *)&t_id, sizeof(t_id)); fid.close();
+    fid.write((char *)&t_id, sizeof(t_id)); fid.close();
     fads.write((char *)&t_ads, sizeof(t_ads)); fads.close();
-//    fos.write((char *)&t_os, sizeof(t_os)); fos.close();
-//    fobserver.write((char *)&t_observer, sizeof(t_observer)); fobserver.close();
+    fos.write((char *)&t_os, sizeof(t_os)); fos.close();
+    fobserver.write((char *)&t_observer, sizeof(t_observer)); fobserver.close();
     printf("%d\n",cnt_stable);
 }
 void count_all_stable()
@@ -234,18 +234,8 @@ void count_all_clicked()
     }
     printf("clicked : %d, Totla : %d\n",cnt,FULL_SCALE);
 }
-enum scale
+void load_hashtable(HashTable *table, fstream &fs)
 {
-    small = smallN,
-    large = bigN
-};
-void load_hashtable(HashTable *table, enum scale s, fstream &fs)
-{
-    if (s!=table->N)
-    {
-        printf("scale mismatch\n");
-        return;
-    }
     fs.read((char *)table, sizeof(HashTable));
 }
 //对于抽查的用户查看他出现的位置是否具有locality
@@ -279,119 +269,147 @@ struct race
 };
 HashTable *a_id, *a_ip, *a_pos, *a_os, *a_ads;
 HashTable *c_id, *c_ip, *c_pos, *c_os, *c_ads;
-void test1()
+
+
+void test2()
 {
+    FILE *out = fopen("/Volumes/Hyakuya/test2.log", "w");
     int bias = FULL_SCALE - CLICK_NUM;
-    /* 首先选择一个用户进行测试 */
-    int user_num = 165749;
-    /* 补全这个用户的信息 需要找到这个用户的所有信息 */
-    vector<Info> full_info;
+    for (int iter=0; iter<(FULL_SCALE>>4); iter++)
     {
-        Info chosen = selector.sequence_read(user_num);//抽查
-        char cmp_buf[20]={0};
-        memcpy(cmp_buf, chosen.id.c_str(), 16);
-        for (int i=0; i<FULL_SCALE; i++)
+        int vector_cnt = 0;
+        /* 首先选择一个用户进行测试 */
+        int user_num = iter;
+        /* 补全这个用户的信息 需要找到这个用户的所有信息 */
+        vector<Info> full_info(1300000);
         {
-            Info tmp = selector.sequence_read(i);
-            char buff[20]={0};
-            memcpy(buff, tmp.id.c_str(), 16);
-            if (memcmp(cmp_buf, buff, 16)==0)
+            Info chosen = selector.sequence_read(user_num);//抽查
+            char cmp_buf[20]={0};
+            memcpy(cmp_buf, chosen.id.c_str(), 16);
+            
+            if (hashtable.find(cmp_buf))continue;
+            hashtable.insert(cmp_buf);
+            for (int i=iter; i<iter+1300000; i++)
             {
-                full_info.push_back(tmp);
-            }
-        }
-    }
-    /* 我们把这些信息导出来看一眼
-    for (int i=0; i<full_info.size(); i++)
-    {
-        //我们只导出需要的信息
-        char b1[20]={0}, b2[20]={0}, b3[20]={0}, b4[20]={0};
-        memcpy(b1, full_info[i].id.c_str(), 16);
-        memcpy(b2, full_info[i].ads_id.c_str(), 16);
-        memcpy(b3, full_info[i].ip_id.c_str(), 16);
-        memcpy(b4, full_info[i].pos_id.c_str(), 16);
-              //id st ad ip os po ti cl
-        printf("%s %d %s %s %s %s %lld %d\n",
-               b1,full_info[i].stable,b2,b3,full_info[i].OS_info,b4,
-               full_info[i].timeStamp,full_info[i].click);
-    }
-    */
-    /* 我们现在整合这些信息 */
-    /* 我们现在已经选定了用户了，我们还要选定pos */
-    /* 观察数据可知pos不是很高的排序优先级，需要遍历整个vector */
-    {
-        HashTable &t = *new HashTable;//新建一个hashtable用来判重
-        for (int i=0; i<full_info.size(); i++)
-        {
-            vector<Info> picked_records;
-            char buf[20]={0};
-            Info sel = full_info[i];
-            memcpy(buf, sel.pos_id.c_str(), 16);
-            Info gen;
-            if (t.find(buf)==0)
-            {
-                picked_records.push_back(full_info[i]);
-                t.insert(buf);
-                //再剩下的里面找出所有的这个条目
-                for (int j=i+1; j<full_info.size(); j++)
+                Info tmp = selector.sequence_read(i);
+                char buff[20]={0};
+                memcpy(buff, tmp.id.c_str(), 16);
+                if (memcmp(cmp_buf, buff, 16)==0)
                 {
-                    Info &crt = full_info[j];
-                    if (memcmp(crt.pos_id.c_str(), buf, 16)==0)
-                    {
-                        picked_records.push_back(crt);
-                    }
+                    full_info.push_back(tmp);
+                    vector_cnt++;
                 }
-                /* 现在要整合出来一条，固定了pos和id的，天哪搞这个头都大，随手选算了 */
-                srand(*(int *)&buf[2] + (int)time(NULL));
-                int pick = rand()%picked_records.size();
-                gen = picked_records[pick];
             }
-            //搞到了gen ，开始bayes
-            double positive = 0.0, negtive = 0.0;
-            char b1[20]={0},b2[20]={0},b3[20]={0},b4[20]={0};
-            memcpy(b1, gen.ads_id.c_str(), 16);
-            memcpy(b2, gen.pos_id.c_str(), 16);
-            memcpy(b3, gen.OS_info, 17);
-            memcpy(b4, gen.ip_id.c_str(), 16);
-            double funda_huge = (double)bias;
-            double funda_small = (double)CLICK_NUM;
-            positive = (*a_ads)[a_ads->find(b1)].cnt/funda_huge *
-            (*a_pos)[a_pos->find(b2)].cnt/funda_huge *
-            (*a_os)[a_os->find(b3)].cnt/funda_huge *
-            funda_huge/FULL_SCALE;
-            
-            negtive = (*c_ads)[c_ads->find(b1)].cnt/funda_small *
-            (*c_pos)[c_pos->find(b2)].cnt/funda_small *
-            (*c_os)[c_os->find(b3)].cnt/funda_small *
-            funda_small / FULL_SCALE;
-            
-            char id_buf[20]={0};
-            memcpy(id_buf, gen.id.c_str(), 16);
-            printf("%s\t%s\t%.8lf\t%.8lf\n",id_buf,b2,positive,negtive);
         }
-        delete &t;
+        printf("iter %d scale: %d\n",iter, vector_cnt);
+        /* 我们现在整合这些信息 */
+        /* 我们现在已经选定了用户了，我们还要选定pos */
+        /* 观察数据可知pos不是很高的排序优先级，需要遍历整个vector */
+        {
+            HashTable &t = *new HashTable;//新建一个hashtable用来判重
+            
+            vector<Info> picked_records(1300000);
+            for (int i=0; i<vector_cnt; i++)
+            {
+                int picked_cnt = 1;
+                char buf[20]={0};
+                Info &sel = full_info[i];
+                memcpy(buf, sel.pos_id.c_str(), 16);
+                Info gen;
+                if (t.find(buf)==0)
+                {
+                    picked_records.clear();
+                    picked_records.push_back(full_info[i]);
+                    t.insert(buf);
+                    //再剩下的里面找出所有的这个条目
+                    for (int j=i+1; j<vector_cnt; j++)
+                    {
+                        Info &crt = full_info[j];
+                        if (memcmp(crt.pos_id.c_str(), buf, 16) == 0)
+                        {
+                            picked_records.push_back(crt);
+                            picked_cnt++;
+                        }
+                    }
+                    /* 现在要整合出来一条，固定了pos和id的，天哪搞这个头都大，随手选算了 */
+                    srand(*(int *)&buf[2] + (int)time(NULL));
+                    int pick = rand()%picked_cnt;
+                    gen = picked_records[pick];
+                }
+                else continue;
+                //搞到了gen ，开始bayes
+                double positive = 0.0, negtive = 0.0;
+                char b1[20]={0},b2[20]={0},b3[20]={0},b4[20]={0};
+                memcpy(b1, gen.ads_id.c_str(), 16);
+                memcpy(b2, gen.pos_id.c_str(), 16);
+                memcpy(b3, gen.OS_info, 17);
+                memcpy(b4, gen.ip_id.c_str(), 16);
+                double funda_huge = (double)bias;
+                double funda_small = (double)CLICK_NUM;
+                positive = (*a_ads)[a_ads->find(b1)].cnt/funda_huge *
+                (*a_pos)[a_pos->find(b2)].cnt/funda_huge *
+                (*a_os)[a_os->find(b3)].cnt/funda_huge *
+                funda_huge/FULL_SCALE;
+                
+                negtive = (*c_ads)[c_ads->find(b1)].cnt/funda_small *
+                (*c_pos)[c_pos->find(b2)].cnt/funda_small *
+                (*c_os)[c_os->find(b3)].cnt/funda_small *
+                funda_small / FULL_SCALE;
+                
+                if (positive < negtive)
+                {
+                    char id_buf[20]={0};
+                    memcpy(id_buf, gen.id.c_str(), 16);
+                    fprintf(stdout,"%s\t%s\t%.20lf\t%.20lf\n",id_buf,b2,positive,negtive);
+                }
+            }
+            delete &t;
+        }
     }
+    fclose(out);
     
 }
 
 void ptest1()
 {
     fstream faid("id_hash.bin",ios::in|ios::binary);
-    fstream faads("ads_action_hash.bin",ios::in|ios::binary);
-    fstream fapos("observer_hash.bin",ios::in|ios::binary);
+    fstream faads("ads_hash.bin",ios::in|ios::binary);
+    fstream fapos("pos_hash.bin",ios::in|ios::binary);
     fstream faos("os_hash.bin",ios::in|ios::binary);
     
     fstream fcid("id_clicked.bin",ios::in|ios::binary);
     fstream fcads("ads_clicked.bin",ios::in|ios::binary);
-    fstream fcpos("os_clicked.bin",ios::in|ios::binary);
-    fstream fcos("observer_clicked.bin",ios::in|ios::binary);
+    fstream fcos("os_clicked.bin",ios::in|ios::binary);
+    fstream fcpos("observer_clicked.bin",ios::in|ios::binary);
     
+    a_id = new HashTable, a_pos = new HashTable;
+    a_os = new HashTable, a_ads = new HashTable;
+    c_id = new HashTable, c_pos = new HashTable;
+    c_os = new HashTable, c_ads = new HashTable;
     
-    test1();
+    load_hashtable(a_id, faid);
+    load_hashtable(a_pos, fapos);
+    load_hashtable(a_os, faos);
+    load_hashtable(a_ads, faads);
+    
+    printf("half loaded\n");
+    
+    load_hashtable(c_id, fcid);
+    load_hashtable(c_pos, fcpos);
+    load_hashtable(c_os, fcos);
+    load_hashtable(c_ads, fcads);
+    
+    printf("start testing\n");
+    test2();
+    
+    delete a_id , delete a_pos ;
+    delete a_os , delete a_ads ;
+    delete c_id , delete c_pos ;
+    delete c_os , delete c_ads ;
 }
 int main()
 {
-    build_hash();
+    ptest1();
     return 0;
 }
 
