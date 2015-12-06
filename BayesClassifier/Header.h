@@ -216,6 +216,11 @@ public:
 		memset(hashTable, 0, sizeof(hashTable));
 		memset(head, 0, sizeof(head));
 	}
+    void clear()
+    {
+        memset(hashTable, 0, sizeof(hashTable));
+        memset(head, 0, sizeof(head));
+    }
 
 private:
 	unsigned int getHashVal(const char * str);

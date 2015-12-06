@@ -270,18 +270,23 @@ struct race
 HashTable *a_id, *a_ip, *a_pos, *a_os, *a_ads;
 HashTable *c_id, *c_ip, *c_pos, *c_os, *c_ads;
 
-
-void test2()
+Info full_info[1300000];
+Info picked_records[1300000];
+void test3()
 {
     FILE *out = fopen("/Volumes/Hyakuya/test2.log", "w");
     int bias = FULL_SCALE - CLICK_NUM;
-    for (int iter=0; iter<(FULL_SCALE>>4); iter++)
+    
+    double funda_huge = (double)bias;
+    double funda_small = (double)CLICK_NUM;
+    HashTable &t = *new HashTable;//新建一个hashtable用来判重
+    int last_step = 0;
+    for (int iter=0; iter<(FULL_SCALE); iter++)
     {
         int vector_cnt = 0;
         /* 首先选择一个用户进行测试 */
         int user_num = iter;
         /* 补全这个用户的信息 需要找到这个用户的所有信息 */
-        vector<Info> full_info(1300000);
         {
             Info chosen = selector.sequence_read(user_num);//抽查
             char cmp_buf[20]={0};
@@ -296,30 +301,33 @@ void test2()
                 memcpy(buff, tmp.id.c_str(), 16);
                 if (memcmp(cmp_buf, buff, 16)==0)
                 {
-                    full_info.push_back(tmp);
+                    full_info[vector_cnt]=tmp;
                     vector_cnt++;
                 }
+                else break;//because of locality
             }
         }
-        printf("iter %d scale: %d\n",iter, vector_cnt);
+        int step;
+        if ((step = iter / 1000000) > last_step)
+        {
+            last_step = step;
+            printf("iter %d\n",iter);
+        }
         /* 我们现在整合这些信息 */
         /* 我们现在已经选定了用户了，我们还要选定pos */
         /* 观察数据可知pos不是很高的排序优先级，需要遍历整个vector */
         {
-            HashTable &t = *new HashTable;//新建一个hashtable用来判重
-            
-            vector<Info> picked_records(1300000);
+            t.clear();
             for (int i=0; i<vector_cnt; i++)
             {
                 int picked_cnt = 1;
                 char buf[20]={0};
                 Info &sel = full_info[i];
                 memcpy(buf, sel.pos_id.c_str(), 16);
-                Info gen;
+                Info *sel_gen;
                 if (t.find(buf)==0)
                 {
-                    picked_records.clear();
-                    picked_records.push_back(full_info[i]);
+                    picked_records[0]=full_info[i];
                     t.insert(buf);
                     //再剩下的里面找出所有的这个条目
                     for (int j=i+1; j<vector_cnt; j++)
@@ -327,25 +335,25 @@ void test2()
                         Info &crt = full_info[j];
                         if (memcmp(crt.pos_id.c_str(), buf, 16) == 0)
                         {
-                            picked_records.push_back(crt);
+                            picked_records[picked_cnt]=crt;
                             picked_cnt++;
                         }
                     }
                     /* 现在要整合出来一条，固定了pos和id的，天哪搞这个头都大，随手选算了 */
                     srand(*(int *)&buf[2] + (int)time(NULL));
                     int pick = rand()%picked_cnt;
-                    gen = picked_records[pick];
+                    sel_gen = &picked_records[pick];
                 }
                 else continue;
+                Info &gen = *sel_gen;
                 //搞到了gen ，开始bayes
                 double positive = 0.0, negtive = 0.0;
-                char b1[20]={0},b2[20]={0},b3[20]={0},b4[20]={0};
+                char b1[20],b2[20],b3[20],b4[20];
                 memcpy(b1, gen.ads_id.c_str(), 16);
                 memcpy(b2, gen.pos_id.c_str(), 16);
                 memcpy(b3, gen.OS_info, 17);
                 memcpy(b4, gen.ip_id.c_str(), 16);
-                double funda_huge = (double)bias;
-                double funda_small = (double)CLICK_NUM;
+                b1[17]=0; b2[17]=0; b3[18]=0; b4[17]=0;
                 positive = (*a_ads)[a_ads->find(b1)].cnt/funda_huge *
                 (*a_pos)[a_pos->find(b2)].cnt/funda_huge *
                 (*a_os)[a_os->find(b3)].cnt/funda_huge *
@@ -358,16 +366,17 @@ void test2()
                 
                 if (positive < negtive)
                 {
-                    char id_buf[20]={0};
+                    char id_buf[20];
                     memcpy(id_buf, gen.id.c_str(), 16);
-                    fprintf(stdout,"%s\t%s\t%.20lf\t%.20lf\n",id_buf,b2,positive,negtive);
+                    buf[17]=0;
+                    fprintf(out,"%s\t%s\t%.20lf\t%.20lf\n",id_buf,b2,positive,negtive);
                 }
             }
-            delete &t;
         }
     }
     fclose(out);
     
+    delete &t;
 }
 
 void ptest1()
@@ -400,7 +409,7 @@ void ptest1()
     load_hashtable(c_ads, fcads);
     
     printf("start testing\n");
-    test2();
+    test3();
     
     delete a_id , delete a_pos ;
     delete a_os , delete a_ads ;
