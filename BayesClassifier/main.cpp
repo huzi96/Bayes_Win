@@ -506,123 +506,122 @@ class Test4
     }
     
 };
-class Test5
+
+Info *full_info[1300000];
+Info *picked_records[1300000];
+
+void test5()
 {
-    Info *full_info[1300000];
-    Info *picked_records[1300000];
-public:
-    void test5()
+    FILE *out = fopen("/Volumes/Hyakuya/test2.log", "w");
+    double bias = FULL_SCALE - CLICK_NUM;
+    double funda_huge = (double)bias,  funda_small = (double)CLICK_NUM;
+    HashTable &t = *new HashTable;//新建一个hashtable用来判重
+    HashTable &_tmin = *new HashTable;
+    HashTable &hashtable = *new HashTable;
+    
+    int last_step = 0;
+    
+    time_t last = time(0);
+    for (int iter=0; iter<(FULL_SCALE); iter++)
     {
-        FILE *out = fopen("/Volumes/Hyakuya/test2.log", "w");
-        double bias = FULL_SCALE - CLICK_NUM;
-        double funda_huge = (double)bias,  funda_small = (double)CLICK_NUM;
-        HashTable &t = *new HashTable;//新建一个hashtable用来判重
-        HashTable &_tmin = *new HashTable;
-        HashTable &hashtable = *new HashTable;
-        
-        int last_step = 0;
-        
-        time_t last = time(0);
-        for (int iter=0; iter<(FULL_SCALE); iter++)
+        int vector_cnt = 0;
+        /* 首先选择一个用户进行测试 */
+        int user_num = iter;
+        /* 补全这个用户的信息 需要找到这个用户的所有信息 */
         {
-            int vector_cnt = 0;
-            /* 首先选择一个用户进行测试 */
-            int user_num = iter;
-            /* 补全这个用户的信息 需要找到这个用户的所有信息 */
-            {
-                Info &chosen = selector.sequence_read(user_num, 0);
-                if (hashtable.find(chosen.id.c_str()))continue;
-                hashtable.insert(chosen.id.c_str());
-                
-                ///可以更新iter
-                while (true)
-                {
-                    Info &tmp = selector.sequence_read(iter, 0);
-                    if (chosen.id==tmp.id)
-                    {
-                        full_info[vector_cnt]=&tmp;
-                        vector_cnt++;
-                    }
-                    else break;//because of locality
-                }
-            }
+            Info &chosen = selector.sequence_read(user_num, 0);
+            if (hashtable.find(chosen.id.c_str()))continue;
+            hashtable.insert(chosen.id.c_str());
             
-            int step;
-            if ((step = iter / 100000) > last_step)
+            ///可以更新iter
+            while (true)
             {
-                time_t now = time(0);
-                
-                last_step = step;
-                printf("iter %d interval %ld\n",iter,now-last);
-                last=now;
-                fflush(out);
-            }
-            /* 我们现在整合这些信息 */
-            /* 我们现在已经选定了用户了，我们还要选定pos */
-            /* 观察数据可知pos不是很高的排序优先级，需要遍历整个vector */
-            {
-                _tmin.clear();
-                
-                for (int i=0; i<vector_cnt; i++)
+                Info &tmp = selector.sequence_read(iter, 0);
+                if (chosen.id==tmp.id)
                 {
-                    int picked_cnt = 1;
-                    Info &sel = *full_info[i];
-                    
-                    Info *sel_gen;
-                    ///重复用了t
-                    if (_tmin.find(sel.pos_id.c_str())==0)
+                    full_info[vector_cnt]=&tmp;
+                    vector_cnt++;
+                    iter++;
+                }
+                else break;//because of locality
+            }
+        }
+        
+        int step;
+        if ((step = iter / 100000) > last_step)
+        {
+            time_t now = time(0);
+            
+            last_step = step;
+            printf("iter %d interval %ld\n",iter,now-last);
+            last=now;
+            fflush(out);
+        }
+        /* 我们现在整合这些信息 */
+        /* 我们现在已经选定了用户了，我们还要选定pos */
+        /* 观察数据可知pos不是很高的排序优先级，需要遍历整个vector */
+        {
+            _tmin.clear();
+            
+            for (int i=0; i<vector_cnt; i++)
+            {
+                int picked_cnt = 1;
+                Info &sel = *full_info[i];
+                
+                Info *sel_gen;
+                ///重复用了t
+                if (_tmin.find(sel.pos_id.c_str())==0)
+                {
+                    picked_records[0]=full_info[i];
+                    _tmin.insert(sel.pos_id.c_str());
+                    //再剩下的里面找出所有的这个条目
+                    for (int j=i+1; j<vector_cnt; j++)
                     {
-                        picked_records[0]=full_info[i];
-                        _tmin.insert(sel.pos_id.c_str());
-                        //再剩下的里面找出所有的这个条目
-                        for (int j=i+1; j<vector_cnt; j++)
+                        Info &crt = *full_info[j];
+                        if (crt.pos_id==sel.pos_id)
                         {
-                            Info &crt = *full_info[j];
-                            if (crt.pos_id==sel.pos_id)
-                            {
-                                picked_records[picked_cnt]=&crt;
-                                picked_cnt++;
-                            }
-                            else break;
+                            picked_records[picked_cnt]=&crt;
+                            picked_cnt++;
                         }
-                        
-                        /* 现在要整合出来一条，固定了pos和id的，天哪搞这个头都大，随手选算了 */
-                        srand(sel.pos_id.c_str()[2] + (int)time(NULL));
-                        int pick = rand()%picked_cnt;
-                        sel_gen = picked_records[pick];
+                        else break;
                     }
-                    else continue;
-                    Info &gen = *sel_gen;
-                    //搞到了gen ，开始bayes
-                    double positive = 0.0, negtive = 0.0;
-                    positive = (*a_ads)[a_ads->find(gen.ads_id.c_str())].cnt/funda_huge *
-                    (*a_pos)[a_pos->find(gen.pos_id.c_str())].cnt/funda_huge *
-                    (*a_os)[a_os->find(gen.OS_info)].cnt/funda_huge *
-                    funda_huge/FULL_SCALE;
                     
-                    negtive = (*c_ads)[c_ads->find(gen.ads_id.c_str())].cnt/funda_small *
-                    (*c_pos)[c_pos->find(gen.pos_id.c_str())].cnt/funda_small *
-                    (*c_os)[c_os->find(gen.OS_info)].cnt/funda_small *
-                    funda_small / FULL_SCALE;
+                    /* 现在要整合出来一条，固定了pos和id的，天哪搞这个头都大，随手选算了 */
+                    srand(sel.pos_id.c_str()[2] + (int)time(NULL));
+                    int pick = rand()%picked_cnt;
+                    sel_gen = picked_records[pick];
+                }
+                else continue;
+                Info &gen = *sel_gen;
+                //搞到了gen ，开始bayes
+                double positive = 0.0, negtive = 0.0;
+                positive = (*a_ads)[a_ads->find(gen.ads_id.c_str())].cnt/funda_huge *
+                (*a_pos)[a_pos->find(gen.pos_id.c_str())].cnt/funda_huge *
+                (*a_os)[a_os->find(gen.OS_info)].cnt/funda_huge *
+                funda_huge/FULL_SCALE;
+                
+                negtive = (*c_ads)[c_ads->find(gen.ads_id.c_str())].cnt/funda_small *
+                (*c_pos)[c_pos->find(gen.pos_id.c_str())].cnt/funda_small *
+                (*c_os)[c_os->find(gen.OS_info)].cnt/funda_small *
+                funda_small / FULL_SCALE;
+                
+                if (positive < negtive)
+                {
+                    fwrite(gen.id.c_str(), sizeof(char), 16, out);
+                    fputc('\t', out);
+                    fwrite(gen.pos_id.c_str(), sizeof(char), 16, out);
+                    fputc('\n', out);
                     
-                    if (positive < negtive)
-                    {
-                        fwrite(gen.id.c_str(), sizeof(char), 16, out);
-                        fputc('\t', out);
-                        fwrite(gen.pos_id.c_str(), sizeof(char), 16, out);
-                        fputc('\n', out);
-                        
-                        //fprintf(out,"\t%.20lf\t%.20lf\n",positive,negtive);
-                    }
+                    //fprintf(out,"\t%.20lf\t%.20lf\n",positive,negtive);
                 }
             }
         }
-        fclose(out);
-        
-        delete &t;
-        delete &_tmin;
     }
-};
+    fclose(out);
+    
+    delete &t;
+    delete &_tmin;
+}
 
 
 void ptest1()
@@ -655,8 +654,7 @@ void ptest1()
     load_hashtable(c_ads, fcads);
     
     printf("start testing\n");
-    Test5 *process = new Test5;
-    process->test5();
+    test5();
     
     delete a_id , delete a_pos ;
     delete a_os , delete a_ads ;
