@@ -534,14 +534,13 @@ void test5()
             hashtable.insert(chosen.id.c_str());
             
             ///可以更新iter
-            while (true)
+            for (int i=iter; i<iter+1300000; i++)
             {
-                Info &tmp = selector.sequence_read(iter, 0);
+                Info &tmp = selector.sequence_read(i, 0);
                 if (chosen.id==tmp.id)
                 {
                     full_info[vector_cnt]=&tmp;
                     vector_cnt++;
-                    iter++;
                 }
                 else break;//because of locality
             }
