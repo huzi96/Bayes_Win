@@ -42,7 +42,7 @@ Node & HashTable::operator[] (const int num)
     return hashTable[num];
 }
 
-unsigned int HashTable::getHashVal(const char * str) //BKDRHash
+unsigned int HashTable::getHashVal(const char * str, int flag) //BKDRHash
 {
     unsigned int seed = 1313131;
     unsigned int hash = 0;
@@ -53,13 +53,39 @@ unsigned int HashTable::getHashVal(const char * str) //BKDRHash
     }
     return hash;
 }
-
-unsigned int HashTable::getVerifyCode(const char * str) //EFLHash
+unsigned int HashTable::getHashVal(const char * str) //BKDRHash
+{
+    unsigned int seed = 1313131;
+    unsigned int hash = 0;
+    for (int i=0; i<16; i++)
+    {
+        hash = hash * seed + (*str++);
+    }
+    
+    return hash;
+}
+unsigned int HashTable::getVerifyCode(const char * str, int flag) //EFLHash
 {
     unsigned int h = 0;
     unsigned int x = 0;
     
     while (*str)
+    {
+        h = (h << 4) + (*str++);
+        if ((x = h & 0xf0000000L) != 0) //超出七个字符
+        {
+            h ^= (x >> 24); //将多余位与末四位异或
+            h &= ~x; //删除多余位
+        }
+    }
+    return h;
+}
+unsigned int HashTable::getVerifyCode(const char * str) //EFLHash
+{
+    unsigned int h = 0;
+    unsigned int x = 0;
+    
+    for (int i=0; i<16; i++)
     {
         h = (h << 4) + (*str++);
         if ((x = h & 0xf0000000L) != 0) //超出七个字符
