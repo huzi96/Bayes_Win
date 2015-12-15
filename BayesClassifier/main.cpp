@@ -8,7 +8,8 @@
  */
 #define CLICK_NUM 4346948
 #define CLICK 0.0670488
-
+//#define START_LEVEL 0
+#define GAP 90000000
 Selector selector;
 
 class basic_tasks
@@ -512,7 +513,7 @@ Info *picked_records[1300000];
 
 void test5()
 {
-    FILE *out = fopen("/Volumes/Hyakuya/test2.log", "w");
+    FILE *out = fopen("/Volumes/Hyakuya/testSTART_LEVEL.log", "w");
     double bias = FULL_SCALE - CLICK_NUM;
     double funda_huge = (double)bias,  funda_small = (double)CLICK_NUM;
     HashTable &t = *new HashTable;//新建一个hashtable用来判重
@@ -522,7 +523,7 @@ void test5()
     int last_step = 0;
     
     time_t last = time(0);
-    for (int iter=0; iter<(FULL_SCALE); iter++)
+    for (int iter=0; iter<FULL_SCALE; iter++)
     {
         int vector_cnt = 0;
         /* 首先选择一个用户进行测试 */
@@ -547,7 +548,7 @@ void test5()
         }
         
         int step;
-        if ((step = iter / 100000) > last_step)
+        if ((step = iter / 1000000) > last_step)
         {
             time_t now = time(0);
             

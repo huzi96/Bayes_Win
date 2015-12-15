@@ -289,7 +289,8 @@ public:
 	}
     void clear()
     {
-        memset(hashTable, 0, sizeof(hashTable));
+//        memset(hashTable, 0, sizeof(hashTable));
+        nodeCnt = 1;
         memset(head, 0, sizeof(head));
     }
 
