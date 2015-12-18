@@ -236,6 +236,78 @@ public:
             return *(Info *)(cache + 104 * (bias - 5000000));
         }
     }
+    Info& map_read(int i, int flag)
+    {
+        //计算应该选用哪个文件
+        unsigned file_code = i / FileScale + 1;
+        if (openedFileCode == file_code)
+        {
+            //已经打开了正确地文件
+            //计算在缓冲区中的地址
+            unsigned bias = i % FileScale;
+            if (bias < 5000000)
+            {
+                if (whichHalf == 0)
+                {
+                    return *(Info *)(cache + 104 * bias);
+                }
+                else
+                {
+                    whichHalf = 0;
+                    file.seekg(0, file.beg);
+                    file.read(cache, 52 * FileScale);
+                    return *(Info *)(cache + 104 * bias);
+                }
+            }
+            else
+            {
+                if (whichHalf == 1)
+                {
+                    return *(Info *)(cache + 104 * (bias - 5000000));
+                }
+                else
+                {
+                    whichHalf = 1;
+                    file.seekg(104 * 5000000, file.beg);
+                    file.read(cache, 52 * FileScale);
+                    return *(Info *)(cache + 104 * (bias - 5000000));
+                }
+            }
+        }
+        else if (openedFileCode == 0)
+        {
+            openedFileCode = file_code;
+            stringstream ss;
+            ss << file_code;
+            file.open(directory + ss.str(), ios::in | ios::binary);
+        }
+        else
+        {
+            file.close();
+            openedFileCode = file_code;
+            stringstream ss;
+            ss << file_code;
+            file.open(directory + ss.str(), ios::in | ios::binary);
+        }
+        
+        
+        unsigned bias = i % FileScale;
+        
+        if (bias < 5000000)
+        {
+            whichHalf = 0;
+            file.seekg(0, file.beg);
+            file.read(cache, 52 * FileScale);
+            return *(Info *)(cache + 104 * bias);
+        }
+        else
+        {
+            whichHalf = 1;
+            file.seekg(104 * 5000000, file.beg);
+            file.read(cache, 52 * FileScale);
+            return *(Info *)(cache + 104 * (bias - 5000000));
+        }
+    }
 	~Selector()
 	{
 		if (openedFileCode != 0)

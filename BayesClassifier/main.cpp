@@ -10,17 +10,24 @@
 #define CLICK 0.0670488
 //#define START_LEVEL 0
 #define GAP 90000000
+#define SMOOTH(num) (num + 0.5)
 Selector selector;
 
 class basic_tasks
 {
-    HashTable hashtable;
+    HashTable &hashtable;
     
     int indicator;
     Info *table;//Table of all Info data
     const int scale = 9615384;//Number of all records
     vector<int> clicked;
-    
+public:
+    basic_tasks():hashtable(*new HashTable())
+    {}
+    ~basic_tasks()
+    {
+        delete &hashtable;
+    }
     //Predict the potiential of request_id clicking ads in request_pos
     void predict(HASH_VALUE request_id, HASH_VALUE request_pos)
     {
@@ -118,12 +125,12 @@ class basic_tasks
         {
             Info tmp = selector.sequence_read(i);
             //参数A
-            hashtable.insert(tmp.OS_info);
+            hashtable.insert(tmp.ads_id.c_str());
             //        int pos_in_hash = hashtable.find(cache);
             //        memcpy(hashtable[pos_in_hash].str, cache, 20);//插入源字符串
         }
         //写入文件,要修改的参数B
-        fstream hf("os_info_test.bin",ios::out|ios::binary);
+        fstream hf("new_ads_hash.bin",ios::out|ios::binary);
         hf.write((char *)&hashtable, sizeof(hashtable));
         hf.close();
         return 0;
@@ -508,12 +515,12 @@ class Test4
     
 };
 
-Info *full_info[1300000];
-Info *picked_records[1300000];
+Info full_info[1300000];
+Info picked_records[1300000];
 
 void test5()
 {
-    FILE *out = fopen("/Volumes/Hyakuya/testSTART_LEVEL.log", "w");
+    FILE *out = fopen("/Volumes/Hyakuya/smooth_result_dec18.log", "w");
     double bias = FULL_SCALE - CLICK_NUM;
     double funda_huge = (double)bias,  funda_small = (double)CLICK_NUM;
     HashTable &t = *new HashTable;//新建一个hashtable用来判重
@@ -540,7 +547,7 @@ void test5()
                 Info &tmp = selector.sequence_read(i, 0);
                 if (chosen.id==tmp.id)
                 {
-                    full_info[vector_cnt]=&tmp;
+                    full_info[vector_cnt]=tmp;
                     vector_cnt++;
                 }
                 else break;//because of locality
@@ -566,7 +573,7 @@ void test5()
             for (int i=0; i<vector_cnt; i++)
             {
                 int picked_cnt = 1;
-                Info &sel = *full_info[i];
+                Info &sel = full_info[i];
                 
                 Info *sel_gen;
                 ///重复用了t
@@ -577,32 +584,35 @@ void test5()
                     //再剩下的里面找出所有的这个条目
                     for (int j=i+1; j<vector_cnt; j++)
                     {
-                        Info &crt = *full_info[j];
+                        Info &crt = full_info[j];
                         if (crt.pos_id==sel.pos_id)
                         {
-                            picked_records[picked_cnt]=&crt;
+                            picked_records[picked_cnt]=crt;
                             picked_cnt++;
                         }
-                        else break;
                     }
                     
                     /* 现在要整合出来一条，固定了pos和id的，天哪搞这个头都大，随手选算了 */
                     srand(sel.pos_id.c_str()[2] + (int)time(NULL));
                     int pick = rand()%picked_cnt;
-                    sel_gen = picked_records[pick];
+                    sel_gen = &picked_records[pick];
                 }
                 else continue;
                 Info &gen = *sel_gen;
                 //搞到了gen ，开始bayes
                 double positive = 0.0, negtive = 0.0;
-                positive = (*a_ads)[a_ads->find(gen.ads_id.c_str())].cnt/funda_huge *
-                (*a_pos)[a_pos->find(gen.pos_id.c_str())].cnt/funda_huge *
-                (*a_os)[a_os->find(gen.OS_info)].cnt/funda_huge *
+                positive =
+                SMOOTH((*a_ads)[a_ads->find(gen.ads_id.c_str())].cnt/funda_huge) *
+                SMOOTH((*a_pos)[a_pos->find(gen.pos_id.c_str())].cnt/funda_huge) *
+                SMOOTH((*a_os)[a_os->find(gen.OS_info)].cnt/funda_huge) *
+                SMOOTH((*a_id)[a_id->find(gen.id.c_str())].cnt/funda_huge) *
                 funda_huge/FULL_SCALE;
                 
-                negtive = (*c_ads)[c_ads->find(gen.ads_id.c_str())].cnt/funda_small *
-                (*c_pos)[c_pos->find(gen.pos_id.c_str())].cnt/funda_small *
-                (*c_os)[c_os->find(gen.OS_info)].cnt/funda_small *
+                negtive =
+                SMOOTH((*c_ads)[c_ads->find(gen.ads_id.c_str())].cnt/funda_small) *
+                SMOOTH((*c_pos)[c_pos->find(gen.pos_id.c_str())].cnt/funda_small) *
+                SMOOTH((*c_os)[c_os->find(gen.OS_info)].cnt/funda_small) *
+                SMOOTH((*c_id)[c_id->find(gen.id.c_str())].cnt/funda_small) *
                 funda_small / FULL_SCALE;
                 
                 if (positive < negtive)
@@ -610,9 +620,9 @@ void test5()
                     fwrite(gen.id.c_str(), sizeof(char), 16, out);
                     fputc('\t', out);
                     fwrite(gen.pos_id.c_str(), sizeof(char), 16, out);
-                    fputc('\n', out);
+//                    fputc('\n', out);
                     
-                    //fprintf(out,"\t%.20lf\t%.20lf\n",positive,negtive);
+                    fprintf(out,"\t%.20lf\t%.20lf\t%lld\n",positive,negtive,gen.timeStamp);
                 }
             }
         }
@@ -661,10 +671,37 @@ void ptest1()
     delete c_id , delete c_pos ;
     delete c_os , delete c_ads ;
 }
+class post_task
+{
+public:
+    static void get_all_pos()
+    {
+        //read hashtable
+        HashTable &pos_table = *new HashTable;
+//        fstream ftable("pos_hash.bin",ios::in|ios::binary);
+//        ftable.read((char *)&pos_table, sizeof(pos_table));
+        //read end
+        int cnt = 0;
+        for (int i=0; i<FULL_SCALE; i++)
+        {
+            Info tmp = selector.sequence_read(i);
+            if (pos_table.find(tmp.pos_id.c_str())) continue;
+            fwrite(tmp.pos_id.c_str(), 1, 16, stdout);
+            putchar('\n');
+            pos_table.insert(tmp.pos_id.c_str());
+            cnt++;
+        }
+        printf("%d\n",cnt);
+    }
+};
+
 int main()
 {
     ptest1();
-    //register_os();
+//    register_os();
+//    post_task::get_all_pos();
+//    basic_tasks *task = new basic_tasks();
+//    task->build_hash_v2();
     return 0;
 }
 
